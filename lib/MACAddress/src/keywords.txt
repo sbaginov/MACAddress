@@ -1,0 +1,34 @@
+#######################################
+# Syntax Coloring Map For MACAddress
+#######################################
+
+#######################################
+# Class (KEYWORD1)
+#######################################
+
+MACAddress	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+# methods names in commond
+uint64ToHex	KEYWORD2
+getOUI24	KEYWORD2
+getExtensionId24	KEYWORD2
+setExtensionId24	KEYWORD2
+getOUI20	KEYWORD2
+getExtensionId28	KEYWORD2
+setExtensionId28	KEYWORD2
+getOUI12	KEYWORD2
+getExtensionId36	KEYWORD2
+setExtensionId36	KEYWORD2
+fromString	KEYWORD2
+c_str	KEYWORD2
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+
