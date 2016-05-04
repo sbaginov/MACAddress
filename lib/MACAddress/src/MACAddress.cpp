@@ -16,8 +16,8 @@ void MACAddress::_clearAddress() {
 }
 
 #ifdef DEBUG
-void MACAddress::_showFailure() {
-  Serial.println(F("Octet assignment failure."));
+void MACAddress::_showOctetAssignmentFailure() {
+  Serial.println(F("Octet assignment failure: the address has been cleared."));
 }
 #endif
 
@@ -55,7 +55,7 @@ MACAddress::MACAddress(int address[]) {
 
   if (out_of_bounds) {
 #ifdef DEBUG
-    _showFailure();
+    _showOctetAssignmentFailure();
 #endif
     _clearAddress();
   }
@@ -161,7 +161,7 @@ bool MACAddress::_fromString(char addr[]) {
 
   if (!rc) {
 #ifdef DEBUG
-    _showFailure();
+    _showOctetAssignmentFailure();
 #endif
     _clearAddress();
   }

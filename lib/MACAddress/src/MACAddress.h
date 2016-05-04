@@ -96,7 +96,7 @@ protected:
   uint8_t _replace_all(char *target, char what, char with);
   MACAddress &_sum(int64_t n, bool add);
 #ifdef DEBUG
-  void _showFailure();
+  void _showOctetAssignmentFailure();
 #endif
 
 public:
