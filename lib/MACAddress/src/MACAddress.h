@@ -13,9 +13,9 @@
 enum class Representation { EUI48, COMMON_FULL, COMMON_COMPACT };
 
 enum class MA {
-	L, // 24 bits for the userAddress
-	M, // 28  "    "   "      "
-	S // 36  "    "   "      "
+  L, // 24 bits for the userAddress
+  M, // 28  "    "   "      "
+  S  // 36  "    "   "      "
 };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -50,123 +50,129 @@ enum class MA {
  */
 class MACAddress : public Printable {
 private:
-	typedef union {
-		uint32_t n {0};
-		uint8_t octet[4];
-	} id32;
-	typedef union {
-		uint64_t n {0};
-		struct {
-			uint8_t octet[5];
-			uint8_t extra[3];
-		};
-	} id36;
-	typedef union {
-		struct {
-			uint8_t right : 4;
-			uint8_t left : 4;
-		};
-		uint8_t n;
-	} nibbles;
+  typedef union {
+    uint32_t n{static_cast<uint32_t>(0)};
+    uint8_t octet[4];
+  } id32;
+  typedef union {
+    uint64_t n{static_cast<uint64_t>(0)};
+    struct {
+      uint8_t octet[5];
+      uint8_t extra[3];
+    };
+  } id36;
+  typedef union {
+    uint8_t n{static_cast<uint8_t>(0)}; // initialization added for consistency
+    struct {
+      uint8_t right : 4;
+      uint8_t left : 4;
+    };
+  } nibbles;
 
-	uint8_t getLeftNibble(uint8_t what, bool readyToBeJoined = true);
-	uint8_t getRightNibble(uint8_t what);
+  uint8_t getLeftNibble(uint8_t what, bool readyToBeJoined = true);
+  uint8_t getRightNibble(uint8_t what);
 
-	// Constants shared by all MACAddress objects
-	static const uint8_t _length {6};
-	static const uint8_t _address_size {sizeof(uint8_t) * _length};
-	static const uint8_t _str_size {17 + 1};
-	static const char _hex[];
-	static const uint32_t _max24 {0xFFFFFFul}; // [0, 2^24 - 1] == [0, 2^24)
-	static const uint32_t _max28 {0xFFFFFFFul}; // [0, 2^28 - 1] == [0, 2^28)
-	static const uint64_t _max36 {0xFFFFFFFFFul}; // [0, 2^36 - 1] == [0, 2^36)
+  // Constants shared by all MACAddress objects
+  static const char colon = ':';
+  static const char dash = '-';
+  static const uint8_t _length{6};
+  static const uint8_t _address_size{sizeof(uint8_t) * _length};
+  static const uint8_t _str_size{17 + 1};
+  static const char _hex[];
+  static const uint32_t _max24{0xFFFFFFul};    // [0, 2^24 - 1] == [0, 2^24)
+  static const uint32_t _max28{0xFFFFFFFul};   // [0, 2^28 - 1] == [0, 2^28)
+  static const uint64_t _max36{0xFFFFFFFFFul}; // [0, 2^36 - 1] == [0, 2^36)
 
-	uint8_t _address[_length];
-	char _strCommonFull[_str_size];
-	char _strCommonCompact[_str_size];
-	char _strEUI48[_str_size];
+  uint8_t _address[_length];
+  char _strCommonFull[_str_size];
+  char _strCommonCompact[_str_size];
+  char _strEUI48[_str_size];
 
-	void _clearAddress();
+  void _clearAddress();
 
 protected:
-	bool _fromString(char addr[]);
-	char _hexToNibble(char c);
-	uint8_t _replace_all(char *target, char what, char with);
-	MACAddress &_sum(int64_t n, bool add);
+  bool _fromString(char addr[]);
+  char _hexToNibble(char c);
+  uint8_t _replace_all(char *target, char what, char with);
+  MACAddress &_sum(int64_t n, bool add);
+#ifdef DEBUG
+  void _showFailure();
+#endif
 
 public:
-	MA ma {MA::L};
-	char *uint64ToHex(uint64_t n);
-	uint32_t getOUI24();
-	uint32_t getExtensionId24();
-	void setExtensionId24(uint32_t n);
+  MA ma{MA::L};
+  char *uint64ToHex(uint64_t n);
+  uint32_t getOUI24();
+  uint32_t getExtensionId24();
+  void setExtensionId24(uint32_t n);
 
-	uint32_t getOUI20();
-	uint32_t getExtensionId28();
-	void setExtensionId28(uint32_t n);
+  uint32_t getOUI20();
+  uint32_t getExtensionId28();
+  void setExtensionId28(uint32_t n);
 
-	uint32_t getOUI12();
-	uint64_t getExtensionId36();
-	void setExtensionId36(uint64_t n);
+  uint32_t getOUI12();
+  uint64_t getExtensionId36();
+  void setExtensionId36(uint64_t n);
 
-	MACAddress();
-	MACAddress(uint8_t address[]);
-	MACAddress(char address[]);
-	MACAddress(const char address[]);
-	MACAddress(const __FlashStringHelper *address);
-	MACAddress(String address);
-	MACAddress(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth,
-	           uint8_t fifth, uint8_t sixth);
-	MACAddress(MACAddress &mac);
+  MACAddress();
+  MACAddress(uint8_t address[]);
+  MACAddress(int address[]);
+  MACAddress(char address[]);
+  MACAddress(const char address[]);
+  MACAddress(const __FlashStringHelper *address);
+  MACAddress(String address);
+  MACAddress(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth,
+             uint8_t fifth, uint8_t sixth);
+  MACAddress(MACAddress &mac);
 
-	bool fromString(const char address[]);
-	bool fromString(char address[]);
-	bool fromString(const __FlashStringHelper *address);
-	bool fromString(String address);
-	char *c_str(Representation representation = Representation::COMMON_FULL);
+  bool fromString(const char address[]);
+  bool fromString(char address[]);
+  bool fromString(const __FlashStringHelper *address);
+  bool fromString(String address);
+  char *c_str(Representation representation = Representation::COMMON_FULL);
 
-	// Copy operator to allow initialization of MACAddress objects from different
-	// types
-	MACAddress &operator=(const uint8_t *address);
-	MACAddress &operator=(const MACAddress &mac);
+  // Copy operator to allow initialization of MACAddress objects from different
+  // types
+  MACAddress &operator=(const uint8_t *address);
+  MACAddress &operator=(const MACAddress &mac);
 
-	// Overloaded index operator to allow getting and setting individual octets of
-	// the address
-	uint8_t operator[] (int i) const;
-	uint8_t &operator[] (int i);
+  // Overloaded index operator to allow getting and setting individual octets of
+  // the address
+  uint8_t operator[](int i) const;
+  uint8_t &operator[](int i);
 
-	// Overloaded comparison operator to allow checking for equality between
-	// different MACAddress objects / arrays
-	bool operator==(const MACAddress &mac) const;
-	bool operator==(const uint8_t *address) const;
-	bool operator==(const char *address) const;
+  // Overloaded comparison operator to allow checking for equality between
+  // different MACAddress objects / arrays
+  bool operator==(const MACAddress &mac) const;
+  bool operator==(const uint8_t *address) const;
+  bool operator==(const char *address) const;
 
-	// Overloaded comparison operator to allow checking for inequality between
-	// different MACAddress objects / arrays
-	bool operator!=(const MACAddress &mac) const;
-	bool operator!=(const uint8_t *address) const;
-	bool operator!=(const char *address) const;
+  // Overloaded comparison operator to allow checking for inequality between
+  // different MACAddress objects / arrays
+  bool operator!=(const MACAddress &mac) const;
+  bool operator!=(const uint8_t *address) const;
+  bool operator!=(const char *address) const;
 
-	MACAddress &operator+=(int64_t n);
-	MACAddress &operator-=(int64_t n);
+  MACAddress &operator+=(int64_t n);
+  MACAddress &operator-=(int64_t n);
 
-	MACAddress &operator+(int64_t n);
-	MACAddress &operator-(int64_t n);
+  MACAddress &operator+(int64_t n);
+  MACAddress &operator-(int64_t n);
 
-	// pre-increment operator overloading (no post-increment)
-	MACAddress &operator++ ();
-	// pre-decrement operator overloading (no post-decrement)
-	MACAddress &operator-- ();
+  // pre-increment operator overloading (no post-increment)
+  MACAddress &operator++();
+  // pre-decrement operator overloading (no post-decrement)
+  MACAddress &operator--();
 
-	// Overloaded cast operator to allow MACAddress objects to be used
-	// where (a pointer to) a six bytes uint8_t array is expected
-	operator uint8_t *() { return _address; }
+  // Overloaded cast operator to allow MACAddress objects to be used
+  // where (a pointer to) a six bytes uint8_t array is expected
+  operator uint8_t *() { return _address; }
 
-	// Overloaded cast operator to allow MACAddress objects to be used where a
-	// pointer to a string is expected
-	operator char *() { return c_str(); }
+  // Overloaded cast operator to allow MACAddress objects to be used where a
+  // pointer to a string is expected
+  operator char *() { return c_str(); }
 
-	virtual size_t printTo(Print &p) const;
+  virtual size_t printTo(Print &p) const;
 };
 
 #endif // _MACAddress_h_

@@ -12,28 +12,64 @@ const char MACAddress::_hex[]{'0', '1', '2', '3', '4', '5', '6', '7',
 
 void MACAddress::_clearAddress() {
   for (auto i = 0; i != _length; ++i)
-    _address[i] = 255;
+    _address[i] = 255; // 255 == 0xFF
 }
+
+#ifdef DEBUG
+void MACAddress::_showFailure() {
+  Serial.println(F("Octet assignment failure."));
+}
+#endif
 
 char MACAddress::_hexToNibble(char c) {
-  static const uint8_t delta = 'A' - 10;
+  static const uint8_t delta = _hex[10] - 10;
   c = toupper(c);
-  return c - (isdigit(c) ? '0' : delta);
+  return c - (isdigit(c) ? _hex[0] : delta);
 }
 
-MACAddress::MACAddress() : _address{0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED} {}
+MACAddress::MACAddress()
+    : _address{static_cast<uint8_t>(0xDE), static_cast<uint8_t>(0xAD),
+               static_cast<uint8_t>(0xBE), static_cast<uint8_t>(0xEF),
+               static_cast<uint8_t>(0xFE), static_cast<uint8_t>(0xED)} {}
+
+MACAddress::MACAddress(uint8_t first, uint8_t second, uint8_t third,
+                       uint8_t fourth, uint8_t fifth, uint8_t sixth)
+    : _address{first, second, third, fourth, fifth, sixth} {}
 
 MACAddress::MACAddress(uint8_t address[]) {
   memcpy(_address, address, _address_size);
 }
 
-MACAddress::MACAddress(char address[]) { _fromString(address); }
+MACAddress::MACAddress(int address[]) {
+  bool out_of_bounds = false;
+  int n;
+
+  for (uint8_t i = 0; i != _length; ++i) {
+    n = address[i];
+    if (n < 0 || n > 255) {
+      out_of_bounds = true;
+      break;
+    }
+    _address[i] = static_cast<uint8_t>(n);
+  }
+
+  if (out_of_bounds) {
+#ifdef DEBUG
+    _showFailure();
+#endif
+    _clearAddress();
+  }
+}
+
+MACAddress::MACAddress(char address[]) { fromString(address); }
 
 MACAddress::MACAddress(const char address[]) { fromString(address); }
 
-MACAddress::MACAddress(uint8_t first, uint8_t second, uint8_t third,
-                       uint8_t fourth, uint8_t fifth, uint8_t sixth)
-    : _address{first, second, third, fourth, fifth, sixth} {}
+MACAddress::MACAddress(String address) { fromString(address); }
+
+MACAddress::MACAddress(const __FlashStringHelper *address) {
+  fromString(address);
+}
 
 MACAddress::MACAddress(MACAddress &mac) {
   // self-assignment check
@@ -56,9 +92,6 @@ bool MACAddress::_fromString(char addr[]) {
    *   :::::1
    *   :::::
    */
-  static const char dash = '-';
-  static const char colon = ':';
-
   bool rc = true;
   uint8_t i = 0;
   uint8_t colons = 0;
@@ -74,7 +107,7 @@ bool MACAddress::_fromString(char addr[]) {
       // Since this is not an EUI-48 MAC,
       // we restore tmp to its original and initial value
       // and - even though we know it is wrong - we just
-      // let the rest of this method to discover it and
+      // let the rest of this method discover it and
       // act accordingly.
       strncpy(tmp, addr, len);
       tmp[len] = 0;
@@ -126,8 +159,12 @@ bool MACAddress::_fromString(char addr[]) {
   if (colons != 5)
     rc = false;
 
-  if (!rc)
+  if (!rc) {
+#ifdef DEBUG
+    _showFailure();
+#endif
     _clearAddress();
+  }
 
   delete[] tmp;
 
@@ -142,8 +179,19 @@ bool MACAddress::fromString(const char address[]) {
   return _fromString(addr);
 }
 
+bool MACAddress::fromString(const __FlashStringHelper *address) {
+  char addr[_str_size];
+  strcpy_P(addr, (PGM_P)address);
+  return _fromString(addr);
+};
+
+bool MACAddress::fromString(String address) {
+  // _fromString() is not directly callable
+  return fromString(address.c_str());
+};
+
 char *MACAddress::c_str(Representation representation) {
-  char mask[] = "%02X:%02X:%02X:%02X:%02X:%02X";
+  char mask[] = "%02X:%02X:%02X:%02X:%02X:%02X"; // TODO: move to .code
 
   switch (representation) {
   case Representation::COMMON_FULL:
@@ -153,7 +201,7 @@ char *MACAddress::c_str(Representation representation) {
     break;
   case Representation::EUI48:
     for (auto i = 4; i <= 24; i += 5)
-      mask[i] = '-';
+      mask[i] = dash;
     snprintf(_strEUI48, _str_size, mask, _address[0], _address[1], _address[2],
              _address[3], _address[4], _address[5]);
     return _strEUI48;
@@ -162,9 +210,7 @@ char *MACAddress::c_str(Representation representation) {
     break;
   }
 
-  const char sep{':'};
-
-  uint8_t j{0}, numSeps{0};
+  uint8_t j{0}, colons{0};
 
   nibbles addr[_length];
   for (auto i = 0; i != _length; ++i)
@@ -183,9 +229,9 @@ char *MACAddress::c_str(Representation representation) {
       _strCommonCompact[j++] = _hex[0];
     }
 
-    if (numSeps < 5) {
-      _strCommonCompact[j++] = sep;
-      ++numSeps;
+    if (colons < 5) {
+      _strCommonCompact[j++] = colon;
+      ++colons;
     }
   }
   _strCommonCompact[j] = '\0';
@@ -204,10 +250,10 @@ MACAddress &MACAddress::operator=(const uint8_t *address) {
 
 MACAddress &MACAddress::operator=(const MACAddress &mac) {
   // self-assignment check
-  if (this != &mac) {
+  if (this != &mac)
     for (auto i = 0; i != _length; ++i)
       _address[i] = mac[i];
-  }
+
   return *this;
 }
 
@@ -237,13 +283,27 @@ bool MACAddress::operator!=(const char *address) const {
 }
 
 MACAddress &MACAddress::_sum(int64_t n, bool add) {
-  int64_t x;
-  int64_t divisor;
+  int64_t x{static_cast<int64_t>(0)};
+  int64_t divisor{_max24 + 1}; // default divisor
 
-  // TODO: pointers to functions to just have the initial switch and not the 2nd
+  /*
+     Pointers to functions to just have the initial switch and not the 2nd
+     require extra code since the methods signatures are different:
+
+       - uint32_t getExtensionId24() == (uint32_t *)func(void)
+       - uint32_t getExtensionId28() == (uint32_t *)func(void)
+       - uint64_t getExtensionId36() == (uint64_t *)func(void)
+
+       - void setExtensionId24(uint32_t) == (void *)func(uint32_t)
+       - void setExtensionId28(uint32_t) == (void *)func(uint32_t)
+       - void setExtensionId36(uint64_t) == (void *)func(uint64_t)
+
+     For this reason and because I don't want to be too smart, the 2nd switch
+     is going to stay.
+   */
   switch (ma) {
   case MA::L:
-    divisor = _max24 + 1;
+    // divisor = _max24 + 1; // default divisor
     x = getExtensionId24();
     break;
 
@@ -344,6 +404,7 @@ uint32_t MACAddress::getExtensionId28() {
   for (auto i = 0; i != 4; ++i)
     rc.octet[i] = _address[_length - 1 - i];
 
+  // reread the last octet and adjust it
   rc.octet[3] = getRightNibble(rc.octet[3]);
 
   return rc.n;
@@ -354,6 +415,8 @@ uint64_t MACAddress::getExtensionId36() {
 
   for (auto i = 0; i != 5; ++i)
     rc.octet[i] = _address[_length - 1 - i];
+
+  // reread the last octet and adjust it
   rc.octet[4] = getRightNibble(rc.octet[4]);
 
   return rc.n;
@@ -421,21 +484,21 @@ char *MACAddress::uint64ToHex(uint64_t n) {
 }
 
 /*
- * @parameter what: [0, 255].
- * @parameter readyToBeJoined: true(default)|false.
- *
- * [code]
- * bool rc;
- * uint8_t what { 0xFA };
- *
- * if(readyToBeJoined) {
- *       rc = (0xF0 == getLeftNibble(what)) == (0xF0 == getLeftNibble(what,
- * true));
- * } else {
- *   rc = 0x0F == getLeftNibble(what, false);
- * }
- * // Here: true == rc
- * [/code]
+    @parameter what: [0, 255].
+    @parameter readyToBeJoined: true(default)|false.
+
+    [code]
+    bool rc;
+    uint8_t what { 0xFA };
+
+    if(readyToBeJoined) {
+      rc = (0xF0 == getLeftNibble(what)) == (0xF0 == getLeftNibble(what,
+                                                                   true));
+    } else {
+      rc = 0x0F == getLeftNibble(what, false);
+    }
+    // Here: true == rc
+    [/code]
  */
 uint8_t MACAddress::getLeftNibble(uint8_t what, bool readyToBeJoined) {
   uint8_t rc{static_cast<uint8_t>(what >> 4)};
@@ -445,15 +508,17 @@ uint8_t MACAddress::getLeftNibble(uint8_t what, bool readyToBeJoined) {
 }
 
 /*
- * @parameter what: [0, 255].
- *
- * [code]
- * uint8_t what { 0xFA };
- * bool rc1 = 0x0A == getRightNibble(what, false);                   // Here:
- * true == rc1
- * bool rc2 = 0xFA == (getLeftNibble(what) + getRightNibble(what));  // Here:
- * true == rc2
- * [/code]
+    @parameter what: [0, 255].
+
+    [code]
+    uint8_t what { 0xFA };
+
+    // Below: true == rc1
+    bool rc1 = 0x0A == getRightNibble(what, false);
+
+    // below: true == rc2
+    bool rc2 = 0xFA == (getLeftNibble(what) + getRightNibble(what));
+    [/code]
  */
 uint8_t MACAddress::getRightNibble(uint8_t what) {
   uint8_t rc{static_cast<uint8_t>(what << 4)};
@@ -461,30 +526,16 @@ uint8_t MACAddress::getRightNibble(uint8_t what) {
 }
 
 size_t MACAddress::printTo(Print &p) const {
-  size_t n = 17;
+  size_t n{static_cast<size_t>(0)};
+
   for (auto i = 0; i < _length; i++) {
     auto value = _address[i];
     if (value < 0x10)
-      n += p.print('0');
-    p.print(value, HEX);
+      n += p.print(_hex[0]);
+    n += p.print(value, HEX);
     if (i != 5)
-      n += p.print(':');
+      n += p.print(colon);
   }
+
   return n;
 }
-
-MACAddress::MACAddress(String address) { fromString(address); }
-
-MACAddress::MACAddress(const __FlashStringHelper *address) {
-  fromString(address);
-};
-
-bool MACAddress::fromString(String address) {
-  return fromString(address.c_str());
-};
-
-bool MACAddress::fromString(const __FlashStringHelper *address) {
-  char addr[_str_size];
-  strcpy_P(addr, (PGM_P)address);
-  return _fromString(addr);
-};
