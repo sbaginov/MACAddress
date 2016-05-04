@@ -65,8 +65,9 @@ bool MACAddress::_fromString(char addr[]) {
 
   uint8_t len = strlen(addr);
 
-  char *tmp = new char[len];
-  strcpy(tmp, addr);
+  char *tmp = new char[len + 1];
+  strncpy(tmp, addr, len);
+  tmp[len] = 0;
 
   if (NULL != strchr(tmp, dash)) {
     if (5 != _replace_all(tmp, dash, colon)) {
@@ -75,7 +76,8 @@ bool MACAddress::_fromString(char addr[]) {
       // and - even though we know it is wrong - we just
       // let the rest of this method to discover it and
       // act accordingly.
-      strcpy(tmp, addr);
+      strncpy(tmp, addr, len);
+      tmp[len] = 0;
     }
   }
 
