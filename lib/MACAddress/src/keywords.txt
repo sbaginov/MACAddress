@@ -12,7 +12,14 @@ MACAddress	KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
-# methods names in commond
+# methods names in common
+_clearAddress KEYWORD2
+_fromString KEYWORD2
+_hexToNibble  KEYWORD2
+_replace_all  KEYWORD2
+_sum  KEYWORD2
+_showOctetAssignmentFailure KEYWORD2
+
 uint64ToHex	KEYWORD2
 getOUI24	KEYWORD2
 getExtensionId24	KEYWORD2
@@ -30,5 +37,12 @@ c_str	KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
-
-
+colon LITERAL1
+dash  LITERAL1
+_length LITERAL1
+_address_size LITERAL1
+_str_size LITERAL1
+_hex  LITERAL1
+_max24  LITERAL1
+_max28  LITERAL1
+_max36  LITERAL1
