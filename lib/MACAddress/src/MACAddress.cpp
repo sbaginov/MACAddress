@@ -10,13 +10,22 @@
 const char MACAddress::_hex[]{'0', '1', '2', '3', '4', '5', '6', '7',
                               '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
-void MACAddress::_clearAddress() {
+void MACAddress::_clearAddress(void) {
   for (auto i = 0; i != _length; ++i)
     _address[i] = 255; // 255 == 0xFF
+#ifdef DEBUG
+  _showOctetAssignmentFailure();
+#endif
+}
+
+bool MACAddress::_validOctets(int first, int second, int third, int fourth,
+                              int fifth, int sixth) {
+  return (_validOctet(first) && _validOctet(second) && _validOctet(third) &&
+          _validOctet(fourth) && _validOctet(fifth) && _validOctet(sixth));
 }
 
 #ifdef DEBUG
-void MACAddress::_showOctetAssignmentFailure() {
+void MACAddress::_showOctetAssignmentFailure(void) {
   Serial.println(F("Octet assignment failure: the address has been cleared."));
 }
 #endif
@@ -27,7 +36,7 @@ char MACAddress::_hexToNibble(char c) {
   return c - (isdigit(c) ? _hex[0] : delta);
 }
 
-MACAddress::MACAddress()
+MACAddress::MACAddress(void)
     : _address{static_cast<uint8_t>(0xDE), static_cast<uint8_t>(0xAD),
                static_cast<uint8_t>(0xBE), static_cast<uint8_t>(0xEF),
                static_cast<uint8_t>(0xFE), static_cast<uint8_t>(0xED)} {}
@@ -36,29 +45,36 @@ MACAddress::MACAddress(uint8_t first, uint8_t second, uint8_t third,
                        uint8_t fourth, uint8_t fifth, uint8_t sixth)
     : _address{first, second, third, fourth, fifth, sixth} {}
 
+MACAddress::MACAddress(int first, int second, int third, int fourth, int fifth,
+                       int sixth)
+    : _address{static_cast<uint8_t>(first), static_cast<uint8_t>(second),
+               static_cast<uint8_t>(third), static_cast<uint8_t>(fourth),
+               static_cast<uint8_t>(fifth), static_cast<uint8_t>(sixth)} {
+  // For consistency we check if any significant bit has been lost
+  // by the static casts
+  if (!_validOctets(first, second, third, fourth, fifth, sixth))
+    _clearAddress();
+}
+
 MACAddress::MACAddress(uint8_t address[]) {
   memcpy(_address, address, _address_size);
 }
 
 MACAddress::MACAddress(int address[]) {
-  bool out_of_bounds = false;
-  int n;
+  bool out_of_bounds{false};
 
   for (uint8_t i = 0; i != _length; ++i) {
-    n = address[i];
-    if (n < 0 || n > 255) {
+    int n = address[i];
+    if (_validOctet(n))
+      _address[i] = static_cast<uint8_t>(n);
+    else {
       out_of_bounds = true;
       break;
     }
-    _address[i] = static_cast<uint8_t>(n);
   }
 
-  if (out_of_bounds) {
-#ifdef DEBUG
-    _showOctetAssignmentFailure();
-#endif
+  if (out_of_bounds)
     _clearAddress();
-  }
 }
 
 MACAddress::MACAddress(char address[]) { fromString(address); }
@@ -159,12 +175,8 @@ bool MACAddress::_fromString(char addr[]) {
   if (colons != 5)
     rc = false;
 
-  if (!rc) {
-#ifdef DEBUG
-    _showOctetAssignmentFailure();
-#endif
+  if (!rc)
     _clearAddress();
-  }
 
   delete[] tmp;
 
@@ -261,8 +273,9 @@ bool MACAddress::operator==(const MACAddress &mac) const {
   return 0 == memcmp(_address, mac._address, _address_size);
 }
 
-bool MACAddress::operator==(const uint8_t *address) const {
-  return 0 == memcmp(_address, address, _address_size);
+bool MACAddress::operator==(char *address) const {
+  MACAddress mac{address};
+  return operator==(mac);
 }
 
 bool MACAddress::operator==(const char *address) const {
@@ -270,15 +283,39 @@ bool MACAddress::operator==(const char *address) const {
   return operator==(mac);
 }
 
+bool MACAddress::operator==(const __FlashStringHelper *address) const {
+  MACAddress mac{address};
+  return operator==(mac);
+}
+
+bool MACAddress::operator==(String address) const {
+  MACAddress mac{address};
+  return operator==(mac);
+}
+
+bool MACAddress::operator==(const uint8_t *address) const {
+  return 0 == memcmp(_address, address, _address_size);
+}
+
 bool MACAddress::operator!=(const MACAddress &mac) const {
   return !(*this == mac);
 }
 
-bool MACAddress::operator!=(const uint8_t *address) const {
+bool MACAddress::operator!=(char *address) const { return !(*this == address); }
+
+bool MACAddress::operator!=(const char *address) const {
   return !(*this == address);
 }
 
-bool MACAddress::operator!=(const char *address) const {
+bool MACAddress::operator!=(const __FlashStringHelper *address) const {
+  return !(*this == address);
+}
+
+bool MACAddress::operator!=(String address) const {
+  return !(*this == address);
+}
+
+bool MACAddress::operator!=(const uint8_t *address) const {
   return !(*this == address);
 }
 
@@ -354,11 +391,15 @@ MACAddress &MACAddress::operator+(int64_t n) { return MACAddress(*this) += n; }
 
 MACAddress &MACAddress::operator-(int64_t n) { return MACAddress(*this) -= n; }
 
-MACAddress &MACAddress::operator++() { return operator+=(1); }
+MACAddress &MACAddress::operator++(void) { return operator+=(1); }
 
-MACAddress &MACAddress::operator--() { return operator-=(1); }
+MACAddress &MACAddress::operator--(void) { return operator-=(1); }
 
-uint32_t MACAddress::getOUI24() {
+MACAddress::operator uint8_t *(void) { return _address; }
+
+MACAddress::operator char *(void) { return c_str(); }
+
+uint32_t MACAddress::getOUI24(void) {
   id32 rc;
 
   for (auto i = 0; i != 3; ++i)
@@ -367,7 +408,7 @@ uint32_t MACAddress::getOUI24() {
   return rc.n;
 }
 
-uint32_t MACAddress::getOUI20() {
+uint32_t MACAddress::getOUI20(void) {
   id32 rc;
 
   for (auto i = 0; i != 3; ++i)
@@ -378,7 +419,7 @@ uint32_t MACAddress::getOUI20() {
   return rc.n;
 }
 
-uint32_t MACAddress::getOUI12() {
+uint32_t MACAddress::getOUI12(void) {
   id32 rc;
 
   for (auto i = 0; i != 2; ++i)
@@ -389,7 +430,7 @@ uint32_t MACAddress::getOUI12() {
   return rc.n;
 }
 
-uint32_t MACAddress::getExtensionId24() {
+uint32_t MACAddress::getExtensionId24(void) {
   id32 rc;
 
   for (auto i = 0; i != 3; ++i)
@@ -398,7 +439,7 @@ uint32_t MACAddress::getExtensionId24() {
   return rc.n;
 }
 
-uint32_t MACAddress::getExtensionId28() {
+uint32_t MACAddress::getExtensionId28(void) {
   id32 rc;
 
   for (auto i = 0; i != 4; ++i)
@@ -410,7 +451,7 @@ uint32_t MACAddress::getExtensionId28() {
   return rc.n;
 }
 
-uint64_t MACAddress::getExtensionId36() {
+uint64_t MACAddress::getExtensionId36(void) {
   id36 rc;
 
   for (auto i = 0; i != 5; ++i)

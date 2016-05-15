@@ -13,20 +13,23 @@
    by Tom Igoe, based on work by Adrian McEwen
    modified 4 May 2016
    by Alberto Vassena (aka sbaginov, Sigmund Baginov) to just
-   show how the MACAddress can be used
+   show how the MACAddress class can be used
  */
 
 #include <SPI.h>
 #include <Ethernet.h>
 #include <MACAddress.h>
 
+const uint32_t BAUD_RATE{115200};
+
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
 MACAddress mac{0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
 // IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
-char server[] = "www.google.com"; // name address for Google (using DNS)
+char server[]{"www.google.com"}; // name address for Google (using DNS)
 
 // Set the static IP address to use if the DHCP fails to assign
 IPAddress ip(192, 168, 0, 177);
@@ -36,38 +39,38 @@ IPAddress ip(192, 168, 0, 177);
 // that you want to connect to (port 80 is default for HTTP):
 EthernetClient client;
 
-void setup() {
+void setup(void) {
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
+  Serial.begin(BAUD_RATE);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
   // start the Ethernet connection:
   if (Ethernet.begin(mac) == 0) {
-    Serial.println("Failed to configure Ethernet using DHCP");
+    Serial.println(F("Failed to configure Ethernet using DHCP"));
     // try to congifure using IP address instead of DHCP:
     Ethernet.begin(mac, ip);
   }
   // give the Ethernet shield a second to initialize:
   delay(1000);
-  Serial.println("connecting...");
+  Serial.println(F("connecting..."));
 
   // if you get a connection, report back via serial:
   if (client.connect(server, 80)) {
-    Serial.println("connected");
+    Serial.println(F("connected"));
     // Make a HTTP request:
-    client.println("GET /search?q=arduino HTTP/1.1");
-    client.println("Host: www.google.com");
-    client.println("Connection: close");
+    client.println(F("GET /search?q=arduino HTTP/1.1"));
+    client.println(F("Host: www.google.com"));
+    client.println(F("Connection: close"));
     client.println();
   } else {
     // if you didn't get a connection to the server:
-    Serial.println("connection failed");
+    Serial.println(F("connection failed"));
   }
 }
 
-void loop() {
+void loop(void) {
   // if there are incoming bytes available
   // from the server, read them and print them:
   if (client.available()) {
@@ -78,7 +81,7 @@ void loop() {
   // if the server's disconnected, stop the client:
   if (!client.connected()) {
     Serial.println();
-    Serial.println("disconnecting.");
+    Serial.println(F("disconnecting."));
     client.stop();
 
     // do nothing forevermore:

@@ -88,33 +88,35 @@ private:
   char _strCommonCompact[_str_size];
   char _strEUI48[_str_size];
 
-  void _clearAddress();
-
 protected:
   bool _fromString(char addr[]);
   char _hexToNibble(char c);
+  void _clearAddress(void);
+  bool _validOctet(int n) { return n >= 0 && n < 256; };
+  bool _validOctets(int first, int second, int third, int fourth, int fifth,
+                    int sixth);
+#ifdef DEBUG
+  void _showOctetAssignmentFailure(void);
+#endif
   uint8_t _replace_all(char *target, char what, char with);
   MACAddress &_sum(int64_t n, bool add);
-#ifdef DEBUG
-  void _showOctetAssignmentFailure();
-#endif
 
 public:
   MA ma{MA::L};
   char *uint64ToHex(uint64_t n);
-  uint32_t getOUI24();
-  uint32_t getExtensionId24();
+  uint32_t getOUI24(void);
+  uint32_t getExtensionId24(void);
   void setExtensionId24(uint32_t n);
 
-  uint32_t getOUI20();
-  uint32_t getExtensionId28();
+  uint32_t getOUI20(void);
+  uint32_t getExtensionId28(void);
   void setExtensionId28(uint32_t n);
 
-  uint32_t getOUI12();
-  uint64_t getExtensionId36();
+  uint32_t getOUI12(void);
+  uint64_t getExtensionId36(void);
   void setExtensionId36(uint64_t n);
 
-  MACAddress();
+  MACAddress(void);
   MACAddress(uint8_t address[]);
   MACAddress(int address[]);
   MACAddress(char address[]);
@@ -123,6 +125,8 @@ public:
   MACAddress(String address);
   MACAddress(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth,
              uint8_t fifth, uint8_t sixth);
+  MACAddress(int first, int second, int third, int fourth, int fifth,
+             int sixth);
   MACAddress(MACAddress &mac);
 
   bool fromString(const char address[]);
@@ -144,14 +148,20 @@ public:
   // Overloaded comparison operator to allow checking for equality between
   // different MACAddress objects / arrays
   bool operator==(const MACAddress &mac) const;
-  bool operator==(const uint8_t *address) const;
+  bool operator==(char *address) const;
   bool operator==(const char *address) const;
+  bool operator==(const __FlashStringHelper *address) const;
+  bool operator==(String address) const;
+  bool operator==(const uint8_t *address) const;
 
-  // Overloaded comparison operator to allow checking for inequality between
+  // Overloaded inequality operator to allow checking for inequality between
   // different MACAddress objects / arrays
   bool operator!=(const MACAddress &mac) const;
-  bool operator!=(const uint8_t *address) const;
+  bool operator!=(char *address) const;
   bool operator!=(const char *address) const;
+  bool operator!=(const __FlashStringHelper *address) const;
+  bool operator!=(String address) const;
+  bool operator!=(const uint8_t *address) const;
 
   MACAddress &operator+=(int64_t n);
   MACAddress &operator-=(int64_t n);
@@ -160,17 +170,17 @@ public:
   MACAddress &operator-(int64_t n);
 
   // pre-increment operator overloading (no post-increment)
-  MACAddress &operator++();
+  MACAddress &operator++(void);
   // pre-decrement operator overloading (no post-decrement)
-  MACAddress &operator--();
+  MACAddress &operator--(void);
 
   // Overloaded cast operator to allow MACAddress objects to be used
   // where (a pointer to) a six bytes uint8_t array is expected
-  operator uint8_t *() { return _address; }
+  operator uint8_t *(void);
 
-  // Overloaded cast operator to allow MACAddress objects to be used where a
-  // pointer to a string is expected
-  operator char *() { return c_str(); }
+  // Overloaded cast operator to allow MACAddress objects to be used
+  // where a pointer to a string is expected
+  operator char *(void);
 
   virtual size_t printTo(Print &p) const;
 };
